@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
+from __future__ import absolute_import
+
 import os
 import glob
+
 import imageio
+import scipy.misc as misc
 import numpy as np
-from io import BytesIO
-from PIL import Image
+from cStringIO import StringIO
 
 
 def pad_seq(seq, batch_size):
@@ -18,7 +22,7 @@ def pad_seq(seq, batch_size):
 
 
 def bytes_to_file(bytes_img):
-    return BytesIO(bytes_img)
+    return StringIO(bytes_img)
 
 
 def normalize_image(img):
@@ -30,18 +34,18 @@ def normalize_image(img):
 
 
 def read_split_image(img):
-    mat = np.array(Image.open(img)).astype(np.float32)  # float를 float32로 변경
+    mat = misc.imread(img).astype(np.float)
     side = int(mat.shape[1] / 2)
     assert side * 2 == mat.shape[1]
     img_A = mat[:, :side]  # target
     img_B = mat[:, side:]  # source
+
     return img_A, img_B
 
 
 def shift_and_resize_image(img, shift_x, shift_y, nw, nh):
     w, h, _ = img.shape
-    img_pil = Image.fromarray(img.astype('uint8'))
-    enlarged = np.array(img_pil.resize((nw, nh), Image.Resampling.BILINEAR))
+    enlarged = misc.imresize(img, [nw, nh])
     return enlarged[shift_x:shift_x + w, shift_y:shift_y + h]
 
 
@@ -56,23 +60,18 @@ def merge(images, size):
         i = idx % size[1]
         j = idx // size[1]
         img[j * h:j * h + h, i * w:i * w + w, :] = image
+
     return img
 
 
 def save_concat_images(imgs, img_path):
     concated = np.concatenate(imgs, axis=1)
-    Image.fromarray((concated * 255).astype('uint8')).save(img_path)  # 값 범위 조정
+    misc.imsave(img_path, concated)
 
 
 def compile_frames_to_gif(frame_dir, gif_file):
     frames = sorted(glob.glob(os.path.join(frame_dir, "*.png")))
     print(frames)
-
-    def resize_image(f):
-        img = Image.open(f)
-        w, h = img.size
-        return np.array(img.resize((int(w * 0.33), int(h * 0.33)), Image.Resampling.NEAREST))
-
-    images = [resize_image(f) for f in frames]
+    images = [misc.imresize(imageio.imread(f), interp='nearest', size=0.33) for f in frames]
     imageio.mimsave(gif_file, images, duration=0.1)
     return gif_file

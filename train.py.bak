@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-
-
+from __future__ import print_function
+from __future__ import absolute_import
 
 import tensorflow as tf
 import argparse
@@ -19,7 +19,7 @@ parser.add_argument('--Lconst_penalty', dest='Lconst_penalty', type=int, default
 parser.add_argument('--Ltv_penalty', dest='Ltv_penalty', type=float, default=0.0, help='weight for tv loss')
 parser.add_argument('--Lcategory_penalty', dest='Lcategory_penalty', type=float, default=1.0,
                     help='weight for category loss')
-parser.add_argument('--embedding_num', dest='embedding_num', type=int, default=216081+24333,
+parser.add_argument('--embedding_num', dest='embedding_num', type=int, default=40,
                     help="number for distinct embeddings")
 parser.add_argument('--embedding_dim', dest='embedding_dim', type=int, default=128, help="dimension for embedding")
 parser.add_argument('--epoch', dest='epoch', type=int, default=100, help='number of epoch')
@@ -43,14 +43,13 @@ args = parser.parse_args()
 
 
 def main(_):
-    config = tf.compat.v1.ConfigProto()
+    config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
 
-    with tf.compat.v1.Session(config=config) as sess:
+    with tf.Session(config=config) as sess:
         model = UNet(args.experiment_dir, batch_size=args.batch_size, experiment_id=args.experiment_id,
                      input_width=args.image_size, output_width=args.image_size, embedding_num=args.embedding_num,
                      embedding_dim=args.embedding_dim, L1_penalty=args.L1_penalty, Lconst_penalty=args.Lconst_penalty,
-                     generator_dim=16, discriminator_dim=16,
                      Ltv_penalty=args.Ltv_penalty, Lcategory_penalty=args.Lcategory_penalty)
         model.register_session(sess)
         if args.flip_labels:
@@ -68,4 +67,4 @@ def main(_):
 
 
 if __name__ == '__main__':
-    tf.compat.v1.app.run()
+    tf.app.run()
