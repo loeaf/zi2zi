@@ -374,23 +374,49 @@ class UNet(object):
         return fake_images, real_images, d_loss, g_loss, l1_loss
 
     def validate_model(self, val_iter, epoch, step):
+        """Validate model and save sample images"""
+        import imageio  # 또는 from PIL import Image
+
         labels, images = next(val_iter)
         fake_imgs, real_imgs, d_loss, g_loss, l1_loss = self.generate_fake_samples(images, labels)
         print("Sample: d_loss: %.5f, g_loss: %.5f, l1_loss: %.5f" % (d_loss, g_loss, l1_loss))
 
+        # 이미지 처리
         merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
         merged_real_images = merge(scale_back(real_imgs), [self.batch_size, 1])
         merged_pair = np.concatenate([merged_real_images, merged_fake_images], axis=1)
 
-        model_id, _ = self.get_model_id_and_dir()
+        # 결과가 0-1 범위를 벗어나지 않도록 클리핑
+        merged_pair = np.clip(merged_pair, 0, 1)
 
+        # float32를 uint8로 변환
+        merged_pair = (merged_pair * 255).astype(np.uint8)
+
+        # 디렉토리 생성
+        model_id, _ = self.get_model_id_and_dir()
         model_sample_dir = os.path.join(self.sample_dir, model_id)
         if not os.path.exists(model_sample_dir):
             os.makedirs(model_sample_dir)
 
+        # 이미지 저장
         sample_img_path = os.path.join(model_sample_dir, "sample_%02d_%04d.png" % (epoch, step))
-        misc.imsave(sample_img_path, merged_pair)
+        imageio.imwrite(sample_img_path, merged_pair)
 
+    def merge(images, size):
+        """Merge multiple images into a single image"""
+        h, w = images.shape[1], images.shape[2]
+        img = np.zeros((h * size[0], w * size[1], images.shape[3]))
+
+        for idx, image in enumerate(images):
+            i = idx % size[1]
+            j = idx // size[1]
+            img[j * h:j * h + h, i * w:i * w + w, :] = image
+
+        return img
+
+    def scale_back(images):
+        """Scale images back to 0-1 range"""
+        return (images + 1.0) / 2.0
     def export_generator(self, save_dir, model_dir, model_name="gen_model"):
         saver = tf.compat.v1.train.Saver()
         self.restore_model(saver, model_dir)
