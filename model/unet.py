@@ -348,14 +348,47 @@ class UNet(object):
         saver.save(self.sess, os.path.join(model_dir, model_name), global_step=step)
 
     def restore_model(self, saver, model_dir):
+        """
+        Restore model from checkpoint with improved error handling and validation
 
-        ckpt = tf.train.get_checkpoint_state(model_dir)
+        Args:
+            saver: tf.train.Saver instance
+            model_dir: Directory containing checkpoint files
 
-        if ckpt:
-            saver.restore(self.sess, ckpt.model_checkpoint_path)
-            print("restored model %s" % model_dir)
-        else:
-            print("fail to restore model %s" % model_dir)
+        Returns:
+            bool: True if restore successful, False otherwise
+        """
+        try:
+            # Verify directory exists
+            if not os.path.exists(model_dir):
+                print(f"Error: Checkpoint directory {model_dir} does not exist")
+                print("Creating directory for future checkpoints...")
+                os.makedirs(model_dir)
+                return False
+
+            # Check for checkpoint file
+            ckpt = tf.train.get_checkpoint_state(model_dir)
+            if ckpt and ckpt.model_checkpoint_path:
+                # Validate checkpoint path exists
+                if os.path.exists(ckpt.model_checkpoint_path + '.index'):
+                    try:
+                        saver.restore(self.sess, ckpt.model_checkpoint_path)
+                        print(f"Successfully restored model from {ckpt.model_checkpoint_path}")
+                        return True
+                    except Exception as e:
+                        print(f"Error restoring checkpoint: {str(e)}")
+                        return False
+                else:
+                    print(f"Checkpoint file {ckpt.model_checkpoint_path} exists in state but not on disk")
+                    return False
+            else:
+                print(f"No checkpoint found in {model_dir}")
+                print("Will start training from scratch")
+                return False
+
+        except Exception as e:
+            print(f"Unexpected error during model restore: {str(e)}")
+            return False
 
     def generate_fake_samples(self, input_images, embedding_ids):
         input_handle, loss_handle, eval_handle, summary_handle = self.retrieve_handles()
@@ -617,10 +650,10 @@ class UNet(object):
                                                                             no_target_ids: shuffled_ids
                                                                         })
                 passed = time.time() - start_time
-                log_format = "Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.5f, g_loss: %.5f, " + \
-                             "category_loss: %.5f, cheat_loss: %.5f, const_loss: %.5f, l1_loss: %.5f, tv_loss: %.5f"
-                print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
-                                    category_loss, cheat_loss, const_loss, l1_loss, tv_loss))
+                # log_format = "Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.5f, g_loss: %.5f, " + \
+                #              "category_loss: %.5f, cheat_loss: %.5f, const_loss: %.5f, l1_loss: %.5f, tv_loss: %.5f"
+                # print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
+                #                     category_loss, cheat_loss, const_loss, l1_loss, tv_loss))
                 summary_writer.add_summary(d_summary, counter)
                 summary_writer.add_summary(g_summary, counter)
 
