@@ -48,7 +48,7 @@ def pickle_examples(paths, train_path, val_path, train_val_split=0.1):
         for example in val_examples:
             pickle.dump(example, fv, protocol=2)
 
-
+# --dir="/Volumes/Extreme SSD/dataset2" --save_dir="/Volumes/Extreme SSD/dataset2" --split_ratio=0.1
 def main():
     parser = argparse.ArgumentParser(description='Compile list of images into a pickled object for training')
     parser.add_argument('--dir', dest='dir', required=True, help='path of examples')

@@ -16,6 +16,7 @@ import importlib
 importlib.reload(sys)
 sys.setdefaultencoding("utf-8")
 
+
 CN_CHARSET = None
 CN_T_CHARSET = None
 JP_CHARSET = None
@@ -103,12 +104,12 @@ parser.add_argument('--char_size', dest='char_size', type=int, default=150, help
 parser.add_argument('--canvas_size', dest='canvas_size', type=int, default=256, help='canvas size')
 parser.add_argument('--x_offset', dest='x_offset', type=int, default=20, help='x offset')
 parser.add_argument('--y_offset', dest='y_offset', type=int, default=20, help='y_offset')
-parser.add_argument('--sample_count', dest='sample_count', type=int, default=1000, help='number of characters to draw')
+parser.add_argument('--sample_count', dest='sample_count', type=int, default=1000, help='number of charactersetdefaultencodings to draw')
 parser.add_argument('--sample_dir', dest='sample_dir', help='directory to save examples')
 parser.add_argument('--label', dest='label', type=int, default=0, help='label as the prefix of examples')
 
 args = parser.parse_args()
-
+#  python font2img.py --src_font /Users/doheyonkim/Depot/zi2zi/0a0d1f779b0bf2b4f1c9e6a69ed03d29 --dst_font /Users/doheyonkim/data/fontbox/ttfs/fonts_all_en/70b3548482ebaec3c86f10aeee371c63 --charset ./charset/custom_chars.txt --sample_count 2402 --sample_dir samples/font_15 --label 15 --filter 1
 if __name__ == "__main__":
     if args.charset in ['CN', 'JP', 'KR', 'CN_T']:
         charset = locals().get("%s_CHARSET" % args.charset)
