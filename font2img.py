@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-
-
+from __future__ import print_function
+from __future__ import absolute_import
 
 import argparse
 import sys
@@ -11,35 +11,30 @@ from PIL import ImageDraw
 from PIL import ImageFont
 import json
 import collections
-import importlib
-
-importlib.reload(sys)
-sys.setdefaultencoding("utf-8")
-
 
 CN_CHARSET = None
 CN_T_CHARSET = None
 JP_CHARSET = None
 KR_CHARSET = None
+EN_CHARSET = None
 
 DEFAULT_CHARSET = "./charset/cjk.json"
 
-
 def load_global_charset():
-    global CN_CHARSET, JP_CHARSET, KR_CHARSET, CN_T_CHARSET
-    cjk = json.load(open(DEFAULT_CHARSET))
+    global CN_CHARSET, JP_CHARSET, KR_CHARSET, CN_T_CHARSET, EN_CHARSET
+    with open(DEFAULT_CHARSET, 'r', encoding='utf-8') as f:
+        cjk = json.load(f)
     CN_CHARSET = cjk["gbk"]
     JP_CHARSET = cjk["jp"]
     KR_CHARSET = cjk["kr"]
+    EN_CHARSET = cjk["eng"]
     CN_T_CHARSET = cjk["gb2312_t"]
-
 
 def draw_single_char(ch, font, canvas_size, x_offset, y_offset):
     img = Image.new("RGB", (canvas_size, canvas_size), (255, 255, 255))
     draw = ImageDraw.Draw(img)
     draw.text((x_offset, y_offset), ch, (0, 0, 0), font=font)
     return img
-
 
 def draw_example(ch, src_font, dst_font, canvas_size, x_offset, y_offset, filter_hashes):
     dst_img = draw_single_char(ch, dst_font, canvas_size, x_offset, y_offset)
@@ -53,7 +48,6 @@ def draw_example(ch, src_font, dst_font, canvas_size, x_offset, y_offset, filter
     example_img.paste(src_img, (canvas_size, 0))
     return example_img
 
-
 def filter_recurring_hash(charset, font, canvas_size, x_offset, y_offset):
     """ Some characters are missing in a given font, filter them
     by checking the recurring hashes
@@ -65,9 +59,8 @@ def filter_recurring_hash(charset, font, canvas_size, x_offset, y_offset):
     for c in sample:
         img = draw_single_char(c, font, canvas_size, x_offset, y_offset)
         hash_count[hash(img.tobytes())] += 1
-    recurring_hashes = [d for d in list(hash_count.items()) if d[1] > 2]
-    return [rh[0] for rh in recurring_hashes]
-
+    recurring_hashes = [rh[0] for rh in hash_count.items() if rh[1] > 2]
+    return recurring_hashes
 
 def font2img(src, dst, charset, char_size, canvas_size,
              x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True):
@@ -91,7 +84,6 @@ def font2img(src, dst, charset, char_size, canvas_size,
             if count % 100 == 0:
                 print("processed %d chars" % count)
 
-
 load_global_charset()
 parser = argparse.ArgumentParser(description='Convert font to images')
 parser.add_argument('--src_font', dest='src_font', required=True, help='path of the source font')
@@ -104,17 +96,18 @@ parser.add_argument('--char_size', dest='char_size', type=int, default=150, help
 parser.add_argument('--canvas_size', dest='canvas_size', type=int, default=256, help='canvas size')
 parser.add_argument('--x_offset', dest='x_offset', type=int, default=20, help='x offset')
 parser.add_argument('--y_offset', dest='y_offset', type=int, default=20, help='y_offset')
-parser.add_argument('--sample_count', dest='sample_count', type=int, default=1000, help='number of charactersetdefaultencodings to draw')
+parser.add_argument('--sample_count', dest='sample_count', type=int, default=1000, help='number of characters to draw')
 parser.add_argument('--sample_dir', dest='sample_dir', help='directory to save examples')
 parser.add_argument('--label', dest='label', type=int, default=0, help='label as the prefix of examples')
 
 args = parser.parse_args()
-#  python font2img.py --src_font /Users/doheyonkim/Depot/zi2zi/0a0d1f779b0bf2b4f1c9e6a69ed03d29 --dst_font /Users/doheyonkim/data/fontbox/ttfs/fonts_all_en/70b3548482ebaec3c86f10aeee371c63 --charset ./charset/custom_chars.txt --sample_count 2402 --sample_dir samples/font_15 --label 15 --filter 1
+# #  python font2img.py --src_font /Users/doheyonkim/Depot/zi2zi/0a0d1f779b0bf2b4f1c9e6a69ed03d29 --dst_font /Users/doheyonkim/data/fontbox/ttfs/fonts_all_en/70b3548482ebaec3c86f10aeee371c63 --charset ./charset/custom_chars.txt --sample_count 2402 --sample_dir samples/font_15 --label 15 --filter 1
 if __name__ == "__main__":
-    if args.charset in ['CN', 'JP', 'KR', 'CN_T']:
+    if args.charset in ['CN', 'JP', 'KR', 'CN_T', 'EN']:
         charset = locals().get("%s_CHARSET" % args.charset)
     else:
-        charset = [c for c in open(args.charset).readline()[:-1].decode("utf-8")]
+        with open(args.charset, 'r', encoding='utf-8') as f:
+            charset = list(f.readline().strip())
     if args.shuffle:
         np.random.shuffle(charset)
     font2img(args.src_font, args.dst_font, charset, args.char_size,
