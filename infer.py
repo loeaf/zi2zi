@@ -134,14 +134,14 @@ def main(_):
 python inference.py \
 --model_dir ./checkpoints \
 --source_obj ./source_images \
---embedding_ids 0,1,2 \
+--embedding_ids 5 \
 --save_dir ./inferred_images
 
 # 보간 with GIF
 python inference.py \
 --model_dir ./checkpoints \
 --source_obj ./source_images \
---embedding_ids 0,1,2 \
+--embedding_ids 5 \
 --interpolate 1 \
 --steps 10 \
 --output_gif transition.gif \
