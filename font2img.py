@@ -101,7 +101,7 @@ parser.add_argument('--sample_dir', dest='sample_dir', help='directory to save e
 parser.add_argument('--label', dest='label', type=int, default=0, help='label as the prefix of examples')
 
 args = parser.parse_args()
-# #  python font2img.py --src_font /Users/doheyonkim/Depot/zi2zi/0a0d1f779b0bf2b4f1c9e6a69ed03d29 --dst_font /Users/doheyonkim/data/fontbox/ttfs/fonts_all_en/70b3548482ebaec3c86f10aeee371c63 --charset ./charset/custom_chars.txt --sample_count 2402 --sample_dir samples/font_15 --label 15 --filter 1
+# python font2img.py --src_font /Users/doheyonkim/Depot/zi2zi/0a0d1f779b0bf2b4f1c9e6a69ed03d29 --dst_font /Users/doheyonkim/data/fontbox/ttfs/fonts_all_en/70b3548482ebaec3c86f10aeee371c63 --charset ./charset/custom_chars.txt --sample_count 2402 --sample_dir /Users/doheyonkim/data/fontbox/test --label 5 --filter 1
 if __name__ == "__main__":
     if args.charset in ['CN', 'JP', 'KR', 'CN_T', 'EN']:
         charset = locals().get("%s_CHARSET" % args.charset)

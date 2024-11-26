@@ -35,7 +35,7 @@ parser.add_argument('--save_dir', dest='save_dir', required=True, help='path to 
 parser.add_argument('--split_ratio', type=float, default=0.1, dest='split_ratio',
                     help='split ratio between train and val')
 args = parser.parse_args()
-
+# python package.py --dir=/Users/doheyonkim/data/fontbox/test --save_dir=/Users/doheyonkim/data/fontbox/test --split_ratio=0.1
 if __name__ == "__main__":
     train_path = os.path.join(args.save_dir, "train.obj")
     val_path = os.path.join(args.save_dir, "val.obj")

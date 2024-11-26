@@ -40,8 +40,33 @@ parser.add_argument('--checkpoint_steps', dest='checkpoint_steps', type=int, def
 parser.add_argument('--flip_labels', dest='flip_labels', type=int, default=None,
                     help='whether flip training data labels or not, in fine tuning')
 args = parser.parse_args()
+'''
+python train.py 
+--experiment_dir=/data/dataset2
+--experiment_id=0
+--batch_size=400
+--lr=0.001
+--epoch=400
+--sample_steps=10
+--schedule=20
+--L1_penalty=100
+--Lconst_penalty=15
+'''
 
-
+'''
+python train.py --experiment_dir=/data/dataset2 \
+                --experiment_id=0 \
+                --batch_size=400 \
+                --lr=0.0005 \  # 더 낮은 학습률
+                --epoch=400 \
+                --sample_steps=10 \
+                --schedule=20 \
+                --L1_penalty=100 \
+                --Lconst_penalty=15 \
+                --fine_tune=<영문폰트레이블> \
+                --resume=1 \
+                --freeze_encoder=1  # 인코더 고정
+'''
 def main(_):
     config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
