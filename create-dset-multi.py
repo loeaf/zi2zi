@@ -33,9 +33,9 @@ def process_single_font(args):
 def process_multiple_fonts():
     # 경로 설정
     src_font = "/Users/doheyonkim/Depot/zi2zi/d461cae31481b059a9e85df14fffe0d5"
-    target_fonts_dir = "/Users/doheyonkim/data/fontbox/ttfs/fonts_all_ko"
+    target_fonts_dir = "/Users/doheyonkim/data/fontbox/dataset1/fonts"
     target_fonts_dir2 = "/Users/doheyonkim/data/fontbox/ttfs/fonts_all_en"
-    samples_base_dir = "/Volumes/Extreme SSD/dataset"
+    samples_base_dir = "/Users/doheyonkim/data/fontbox/dataset1"
 
     # samples 기본 디렉토리 생성
     if not os.path.exists(samples_base_dir):
@@ -43,11 +43,11 @@ def process_multiple_fonts():
 
     # 타겟 폰트 파일들 리스트 가져오기
     target_fonts = []
-    for file in os.listdir(target_fonts_dir)[:100]:
+    for file in os.listdir(target_fonts_dir):
         target_fonts.append(os.path.join(target_fonts_dir, file))
 
-    for file in os.listdir(target_fonts_dir2)[:100]:
-        target_fonts.append(os.path.join(target_fonts_dir2, file))
+    # for file in os.listdir(target_fonts_dir2)[:20]:
+    #     target_fonts.append(os.path.join(target_fonts_dir2, file))
 
     print(f"처리할 폰트 수: {len(target_fonts)}")
 

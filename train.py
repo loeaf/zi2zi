@@ -41,15 +41,15 @@ parser.add_argument('--flip_labels', dest='flip_labels', type=int, default=None,
                     help='whether flip training data labels or not, in fine tuning')
 args = parser.parse_args()
 '''
-python train.py 
---experiment_dir=/data/dataset2
---experiment_id=0
---batch_size=400
---lr=0.001
---epoch=400
---sample_steps=10
---schedule=20
---L1_penalty=100
+python train.py \
+--experiment_dir=/data/dataset \
+--experiment_id=0 \
+--batch_size=400 \
+--lr=0.001 \
+--epoch=400 \
+--sample_steps=10 \
+--schedule=20 \
+--L1_penalty=100 \
 --Lconst_penalty=15
 '''
 
@@ -71,25 +71,41 @@ def main(_):
     config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
 
-    with tf.compat.v1.Session(config=config) as sess:
-        model = UNet(args.experiment_dir, batch_size=args.batch_size, experiment_id=args.experiment_id,
-                     input_width=args.image_size, output_width=args.image_size, embedding_num=args.embedding_num,
-                     embedding_dim=args.embedding_dim, L1_penalty=args.L1_penalty, Lconst_penalty=args.Lconst_penalty,
-                     generator_dim=16, discriminator_dim=16,
-                     Ltv_penalty=args.Ltv_penalty, Lcategory_penalty=args.Lcategory_penalty)
-        model.register_session(sess)
-        if args.flip_labels:
-            model.build_model(is_training=True, inst_norm=args.inst_norm, no_target_source=True)
-        else:
-            model.build_model(is_training=True, inst_norm=args.inst_norm)
-        fine_tune_list = None
-        if args.fine_tune:
-            ids = args.fine_tune.split(",")
-            fine_tune_list = set([int(i) for i in ids])
-        model.train(lr=args.lr, epoch=args.epoch, resume=args.resume,
-                    schedule=args.schedule, freeze_encoder=args.freeze_encoder, fine_tune=fine_tune_list,
-                    sample_steps=args.sample_steps, checkpoint_steps=args.checkpoint_steps,
-                    flip_labels=args.flip_labels)
+    # GPU 메모리 분할 사용 설정
+    config.gpu_options.per_process_gpu_memory_fraction = 0.5
+    # GPU 병렬 처리 설정
+    strategy = tf.distribute.MirroredStrategy(devices=["/gpu:0", "/gpu:1"])
+
+    with strategy.scope():
+        with tf.compat.v1.Session(config=config) as sess:
+            model = UNet(args.experiment_dir, batch_size=args.batch_size, experiment_id=args.experiment_id,
+                         input_width=args.image_size, output_width=args.image_size,
+                         embedding_num=args.embedding_num,
+                         embedding_dim=args.embedding_dim, L1_penalty=args.L1_penalty,
+                         Lconst_penalty=args.Lconst_penalty,
+                         generator_dim=16, discriminator_dim=16,
+                         Ltv_penalty=args.Ltv_penalty,
+                         Lcategory_penalty=args.Lcategory_penalty)
+
+            model.register_session(sess)
+            if args.flip_labels:
+                model.build_model(is_training=True, inst_norm=args.inst_norm,
+                                  no_target_source=True)
+            else:
+                model.build_model(is_training=True, inst_norm=args.inst_norm)
+
+            # 나머지 training 코드는 동일
+            fine_tune_list = None
+            if args.fine_tune:
+                ids = args.fine_tune.split(",")
+                fine_tune_list = set([int(i) for i in ids])
+
+            model.train(lr=args.lr, epoch=args.epoch, resume=args.resume,
+                        schedule=args.schedule, freeze_encoder=args.freeze_encoder,
+                        fine_tune=fine_tune_list,
+                        sample_steps=args.sample_steps,
+                        checkpoint_steps=args.checkpoint_steps,
+                        flip_labels=args.flip_labels)
 
 
 if __name__ == '__main__':
