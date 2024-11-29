@@ -153,52 +153,53 @@ class UNet(object):
             return tf.nn.sigmoid(fc1), fc1, fc2
 
     def build_model(self, is_training=True, inst_norm=False, no_target_source=False):
-        # 데이터를 두 GPU로 분할하기 위한 준비
+        # Save original batch size and temporarily modify it for split processing
+        original_batch_size = self.batch_size
+        self.batch_size = self.batch_size // 2
+
         with tf.device('/cpu:0'):
             real_data = tf.compat.v1.placeholder(tf.float32,
-                                                 [self.batch_size, self.input_width, self.input_width,
+                                                 [original_batch_size, self.input_width, self.input_width,
                                                   self.input_filters + self.output_filters],
                                                  name='real_A_and_B_images')
             embedding_ids = tf.compat.v1.placeholder(tf.int64, shape=None, name="embedding_ids")
             no_target_data = tf.compat.v1.placeholder(tf.float32,
-                                                      [self.batch_size, self.input_width, self.input_width,
+                                                      [original_batch_size, self.input_width, self.input_width,
                                                        self.input_filters + self.output_filters],
                                                       name='no_target_A_and_B_images')
             no_target_ids = tf.compat.v1.placeholder(tf.int64, shape=None, name="no_target_embedding_ids")
 
-            # 배치를 두 부분으로 나누기
-            split_size = self.batch_size // 2
-            real_data_1, real_data_2 = tf.split(real_data, 2)
-            embedding_ids_1, embedding_ids_2 = tf.split(embedding_ids, 2)
+            # Split the data
+            real_data_splits = tf.split(real_data, 2)
+            embedding_ids_splits = tf.split(embedding_ids, 2)
 
-        # GPU 0에서의 연산
+        # GPU 0 processing
         with tf.device('/gpu:0'):
-            # 기존 연산의 절반을 첫 번째 GPU에서 처리
-            real_B_1 = real_data_1[:, :, :, :self.input_filters]
-            real_A_1 = real_data_1[:, :, :, self.input_filters:self.input_filters + self.output_filters]
+            real_B_1 = real_data_splits[0][:, :, :, :self.input_filters]
+            real_A_1 = real_data_splits[0][:, :, :, self.input_filters:self.input_filters + self.output_filters]
 
             embedding = init_embedding(self.embedding_num, self.embedding_dim)
-            fake_B_1, encoded_real_A_1 = self.generator(real_A_1, embedding, embedding_ids_1,
+            fake_B_1, encoded_real_A_1 = self.generator(real_A_1, embedding, embedding_ids_splits[0],
                                                         is_training=is_training, inst_norm=inst_norm)
 
-        # GPU 1에서의 연산
+        # GPU 1 processing
         with tf.device('/gpu:1'):
-            # 나머지 절반을 두 번째 GPU에서 처리
-            real_B_2 = real_data_2[:, :, :, :self.input_filters]
-            real_A_2 = real_data_2[:, :, :, self.input_filters:self.input_filters + self.output_filters]
+            real_B_2 = real_data_splits[1][:, :, :, :self.input_filters]
+            real_A_2 = real_data_splits[1][:, :, :, self.input_filters:self.input_filters + self.output_filters]
 
-            fake_B_2, encoded_real_A_2 = self.generator(real_A_2, embedding, embedding_ids_2,
+            fake_B_2, encoded_real_A_2 = self.generator(real_A_2, embedding, embedding_ids_splits[1],
                                                         is_training=is_training, inst_norm=inst_norm, reuse=True)
 
-        # CPU에서 결과 합치기
+        # Restore original batch size
+        self.batch_size = original_batch_size
+
+        # Combine results on CPU
         with tf.device('/cpu:0'):
-            # 결과 재결합
             real_B = tf.concat([real_B_1, real_B_2], 0)
             real_A = tf.concat([real_A_1, real_A_2], 0)
             fake_B = tf.concat([fake_B_1, fake_B_2], 0)
             encoded_real_A = tf.concat([encoded_real_A_1, encoded_real_A_2], 0)
 
-            # 여기서부터는 기존 코드와 동일
             real_AB = tf.concat([real_A, real_B], 3)
             fake_AB = tf.concat([real_A, fake_B], 3)
 
