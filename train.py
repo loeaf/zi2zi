@@ -67,18 +67,27 @@ python train.py --experiment_dir=/data/dataset2 \
                 --resume=1 \
                 --freeze_encoder=1  # 인코더 고정
 '''
+
+
 def main(_):
+    # GPU 메모리 설정
     config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
 
-    # GPU 메모리 분할 사용 설정
-    config.gpu_options.per_process_gpu_memory_fraction = 0.5
-    # GPU 병렬 처리 설정
-    strategy = tf.distribute.MirroredStrategy(devices=["/gpu:0", "/gpu:1"])
+    # GPU 병렬 처리를 위한 설정
+    config.gpu_options.visible_device_list = "0,1"  # 사용할 GPU 지정
 
-    with strategy.scope():
+    # CPU와 GPU 병렬 처리 옵션
+    config.allow_soft_placement = True
+    config.log_device_placement = False
+
+    # 두 GPU에 작업 분산
+    with tf.device('/cpu:0'):
+        tower_grads = []
+
         with tf.compat.v1.Session(config=config) as sess:
-            model = UNet(args.experiment_dir, batch_size=args.batch_size, experiment_id=args.experiment_id,
+            model = UNet(args.experiment_dir, batch_size=args.batch_size,
+                         experiment_id=args.experiment_id,
                          input_width=args.image_size, output_width=args.image_size,
                          embedding_num=args.embedding_num,
                          embedding_dim=args.embedding_dim, L1_penalty=args.L1_penalty,
@@ -87,6 +96,18 @@ def main(_):
                          Ltv_penalty=args.Ltv_penalty,
                          Lcategory_penalty=args.Lcategory_penalty)
 
+            # GPU 사용량을 균등하게 분배
+            split_batch_size = args.batch_size // 2
+
+            # 각 GPU에 모델 복제
+            with tf.device('/gpu:0'):
+                model_gpu0 = model
+                model_gpu0.batch_size = split_batch_size
+
+            with tf.device('/gpu:1'):
+                model_gpu1 = model
+                model_gpu1.batch_size = split_batch_size
+
             model.register_session(sess)
             if args.flip_labels:
                 model.build_model(is_training=True, inst_norm=args.inst_norm,
@@ -94,7 +115,7 @@ def main(_):
             else:
                 model.build_model(is_training=True, inst_norm=args.inst_norm)
 
-            # 나머지 training 코드는 동일
+            # 나머지 training 코드
             fine_tune_list = None
             if args.fine_tune:
                 ids = args.fine_tune.split(",")
