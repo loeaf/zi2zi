@@ -3,6 +3,20 @@
 
 
 import tensorflow as tf
+# GPU 메모리 분할 설정
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        # GPU 메모리 증가 설정
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+
+        # 두 GPU에 작업 분산을 위한 설정
+        strategy = tf.distribute.MirroredStrategy(devices=["/gpu:0", "/gpu:1"])
+
+    except RuntimeError as e:
+        print(e)
+
 import argparse
 
 from model.unet import UNet
@@ -72,14 +86,14 @@ python train.py --experiment_dir=/data/dataset2 \
 def main(_):
     # GPU 메모리 설정
     config = tf.compat.v1.ConfigProto()
+    # GPU 메모리 제한 설정
     config.gpu_options.allow_growth = True
+    config.gpu_options.per_process_gpu_memory_fraction = 0.9  # 각 GPU의 90% 사용
 
-    # GPU 병렬 처리를 위한 설정
-    config.gpu_options.visible_device_list = "0,1"  # 사용할 GPU 지정
-
-    # CPU와 GPU 병렬 처리 옵션
+    # GPU 간 작업 분배 설정
+    config.gpu_options.visible_device_list = "0,1"
     config.allow_soft_placement = True
-    config.log_device_placement = False
+
 
     # 두 GPU에 작업 분산
     with tf.device('/cpu:0'):
